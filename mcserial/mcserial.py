@@ -1,7 +1,7 @@
 from minecraftstuff import ShapeBlock,MinecraftShape
 from mcpi.minecraft import Vec3,Minecraft
 from time import sleep
-class MinecraftBuild:
+class MinecraftSerial:
     def __init__(self,mc:Minecraft):
         self.mc=mc
     
@@ -9,7 +9,7 @@ class MinecraftBuild:
         """The player hit a block and get the position of the block hit"""
         self.mc.postToChat(txt)
         self.mc.events.pollBlockHits()
-        for event in self.mc.events.pollBlockHits()
+        for event in self.mc.events.pollBlockHits():
 
             pos=event.pos
             b=self.mc.getBlockWithData(pos)
