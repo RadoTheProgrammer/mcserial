@@ -1,4 +1,5 @@
 #from minecraftstuff import ShapeBlock,MinecraftShape
+from xml.dom.expatbuilder import parseString
 from mcpi.minecraft import Vec3,Minecraft
 from time import sleep
 import numpy as np
@@ -11,15 +12,17 @@ class MinecraftSerial:
     def copy(self,coords1=None,coords2=None,use_tqdm=False):
         coords,dims = self._copy_util(coords1,coords2)
 
-        data=np.zeros((dims.y,dims.x,dims.z),dtype=np.float16).view(Data)
+        data=np.zeros((dims.y,dims.z,dims.x),dtype=np.float16).view(Data)
         data.mc=self.mc
         #data=str(dims.x)+","+str(dims.y)+","+str(dims.z)+"\n"
 
         for y in tqdm(range(dims.y)) if use_tqdm else range(dims.y):
-            for x in range(dims.x):
-                for z in range(dims.z):
-                    blockid=self.mc.getBlockWithData(coords.x+x,coords.y+y,coords.z+z)
-                    data[y,x,z]=blockid.id+blockid.data/100                      
+            for z in range(dims.z):
+                for x in range(dims.x):
+                    block=self.mc.getBlockWithData(coords.x+x,coords.y+y,coords.z+z)
+                    if block.id==31:
+                        pass
+                    data[y,z,x]=block.id+block.data/100                      
                         
         #print(data)
         return data
@@ -53,7 +56,7 @@ class MinecraftSerial:
                 self.mc.setBlock(pos,41)
                 sleep(0.2)
                 self.mc.setBlock(pos,b)
-            
+                self.mc.postToChat("Block hit at "+str(pos))
                 return pos
 
     def load(self,file):
@@ -95,9 +98,9 @@ class Data(np.ndarray):
         coords = Vec3(*coords)
         dims = self.shape
         for y in tqdm(range(dims[1])) if use_tqdm else range(dims[1]):
-            for x in range(dims[0]):
-                for z in range(dims[2]):
-                    block=self[y,x,z]
+            for z in range(dims[2]):
+                for x in range(dims[0]):
+                    block=self[y,z,x]
                     blockid=int(block)
                     blockdata=int((block-blockid)*100)
                     
