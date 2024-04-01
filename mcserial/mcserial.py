@@ -1,116 +1,113 @@
-from minecraftstuff import ShapeBlock,MinecraftShape
+#from minecraftstuff import ShapeBlock,MinecraftShape
 from mcpi.minecraft import Vec3,Minecraft
 from time import sleep
+import numpy as np
+from tqdm import tqdm
 class MinecraftSerial:
     def __init__(self,mc:Minecraft):
         self.mc=mc
     
-    def Hit(self,txt):
+
+    def copy(self,coords1=None,coords2=None,use_tqdm=False):
+        coords,dims = self._copy_util(coords1,coords2)
+
+        data=np.zeros((dims.y,dims.x,dims.z),dtype=np.float16).view(Data)
+        data.mc=self.mc
+        #data=str(dims.x)+","+str(dims.y)+","+str(dims.z)+"\n"
+
+        for y in tqdm(range(dims.y)) if use_tqdm else range(dims.y):
+            for x in range(dims.x):
+                for z in range(dims.z):
+                    blockid=self.mc.getBlockWithData(coords.x+x,coords.y+y,coords.z+z)
+                    data[y,x,z]=blockid.id+blockid.data/100                      
+                        
+        #print(data)
+        return data
+    
+    def _copy_util(self,coords1,coords2):
+        coords1 = self._to_vec3(coords1,"Coords1")
+        coords2 = self._to_vec3(coords2,"Coords2")
+        return Vec3(
+                min(coords1.x,coords2.x),
+                min(coords1.y,coords2.y),
+                min(coords1.z,coords2.z)
+            ),Vec3(
+                abs(coords1.x-coords2.x)+1,
+                abs(coords1.y-coords2.y)+1,
+                abs(coords1.z-coords2.z)+1
+            )     
+    def _to_vec3(self,coords,hit_txt):
+        if coords is None:
+            return self.hit(hit_txt)
+        return Vec3(*coords)   
+
+    def hit(self,txt):
         """The player hit a block and get the position of the block hit"""
         self.mc.postToChat(txt)
         self.mc.events.pollBlockHits()
-        for event in self.mc.events.pollBlockHits():
+        while True:
+            for event in self.mc.events.pollBlockHits():
 
-            pos=event.pos
-            b=self.mc.getBlockWithData(pos)
-            self.mc.setBlock(pos,41)
-            sleep(0.2)
-            self.mc.setBlock(pos,b)
-        
-        return pos
-    def scannage3D(self,origine,dimensions,show_charging=False):
-        sc=show_charging
-        if sc:
-            print("="*100)
-        data=str(dimensions.x)+","+str(dimensions.y)+","+str(dimensions.z)+"\n"
-        a_scanner=dimensions.x*dimensions.y*dimensions.z
-        deja_scanne=0
-        dernier_scan=0
-        for y in range(dimensions.y):
-            data+="\n"
-            for x in range(dimensions.x):
-                line=""
-                for z in range(dimensions.z):
-                    blockid=self.mc.getBlockWithData(origine.x+x,origine.y+y,origine.z+z)
-                    if line!="":
-                        line=line+","
-                    if blockid.data==0:
-                        line=line+str(blockid.id)
-                    else:
-                        line=line+str(blockid.id)+"/"+str(blockid.data)
-                    if sc:
-                        deja_scanne+=1
-                        scan=int((deja_scanne/a_scanner)*100)
-                        if scan>dernier_scan:
-                            print("|"*(scan-dernier_scan),end="")
-                            dernier_scan=scan
+                pos=event.pos
+                b=self.mc.getBlockWithData(pos)
+                self.mc.setBlock(pos,41)
+                sleep(0.2)
+                self.mc.setBlock(pos,b)
+            
+                return pos
+
+    def load(self,file):
+        data=np.load(file).view(Data)
+        data.mc=self.mc
+# def __replace(txtFormat):
+#     global _data
+#     _data=0
+#     _data=_data.replace(txtFormat.format(_old),txtFormat.format(_new))
+
+class Data(np.ndarray):
+    mc = None
+    # def ShapeBlocks(self):
+    #     lignes=self.data.splitlines()
+    #     coords=lignes[0].split(",")
+    #     dimsx=int(coords[0])
+    #     dimsy=int(coords[1])
+    #     dimsz=int(coords[2])
+    #     Shapeblocks=[]
+    #     for repeat in range(1):
+    #         idxligne=1
+    #         for y in range(dimsy):
+    #             idxligne=idxligne+1
+    #             for x in range(dimsx):
+    #                 ligne=lignes[idxligne]
+    #                 idxligne=idxligne+1
+    #                 donnee=ligne.split(",")
+    #                 for z in range(dimsz):
+    #                     blockid=donnee[z].split("/")
+    #                     if len(blockid)==1:
+    #                         blockdata=0
                             
-                        
-                data+=line+"\n"
-        #print(data)
-        return data
-    def impression3D(self,data,origine,show_charging=False):
-        MinecraftShape(self.mc,origine,Data(data).ShapeBlocks())
-def Calculer(coords1,coords2,ReturnOrigines=True,ReturnDimensions=True):
-    if ReturnOrigines:
-        origine=Vec3(
-            min(coords1.x,coords2.x),
-            min(coords1.y,coords2.y),
-            min(coords1.z,coords2.z)
-        )
-
-    if ReturnDimensions:
-        dimensions=Vec3(
-            abs(coords1.x-coords2.x)+1,
-            abs(coords1.y-coords2.y)+1,
-            abs(coords1.z-coords2.z)+1
-        )
-
-    if ReturnOrigines:
-        if ReturnDimensions:
-            return origine,dimensions
-        else:
-            return origine
-    else:
-        if ReturnDimensions:
-            return dimensions
-def __replace(txtFormat):
-    global _data
-    _data=0
-    _data=_data.replace(txtFormat.format(_old),txtFormat.format(_new))
-class Data:
-    def __init__(self,data):
-        self.data=data
-    def ShapeBlocks(self):
-        lignes=self.data.splitlines()
-        coords=lignes[0].split(",")
-        dimensionsx=int(coords[0])
-        dimensionsy=int(coords[1])
-        dimensionsz=int(coords[2])
-        Shapeblocks=[]
-        for repeat in range(1):
-            idxligne=1
-            for y in range(dimensionsy):
-                idxligne=idxligne+1
-                for x in range(dimensionsx):
-                    ligne=lignes[idxligne]
-                    idxligne=idxligne+1
-                    donnee=ligne.split(",")
-                    for z in range(dimensionsz):
-                        blockid=donnee[z].split("/")
-                        if len(blockid)==1:
-                            blockdata=0
-                            
-                        else:
-                            blockdata=int(blockid[1])
-                        Shapeblocks.append(ShapeBlock(x,y,z,int(blockid[0]),blockdata))
-        return Shapeblocks
-    def replace(old,new):
-        global _data,_old,_new
-        _data,_old,_new=self.data,old,new
-        __replace("\n{}\n")
-        __replace("\n{},")
-        __replace(",{}\n")
-        __replace(",{},")
-        return Data(_data)
+    #                     else:
+    #                         blockdata=int(blockid[1])
+    #                     Shapeblocks.append(ShapeBlock(x,y,z,int(blockid[0]),blockdata))
+    #     return Shapeblocks
+    
+    def paste(self,coords,use_tqdm=False):
+        coords = Vec3(*coords)
+        dims = self.shape
+        for y in tqdm(range(dims[1])) if use_tqdm else range(dims[1]):
+            for x in range(dims[0]):
+                for z in range(dims[2]):
+                    block=self[y,x,z]
+                    blockid=int(block)
+                    blockdata=int((block-blockid)*100)
+                    
+                    self.mc.setBlock(coords.x+x,coords.y+y,coords.z+z,blockid,blockdata)
+    # def replace(old,new):
+    #     global _data,_old,_new
+    #     _data,_old,_new=self.data,old,new
+    #     __replace("\n{}\n")
+    #     __replace("\n{},")
+    #     __replace(",{}\n")
+    #     __replace(",{},")
+    #     return Data(_data)
 
