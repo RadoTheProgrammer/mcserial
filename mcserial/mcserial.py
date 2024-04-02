@@ -3,6 +3,7 @@
 import time
 
 from mcpi.minecraft import Vec3,Minecraft
+from mcpi.timer import t
 from time import sleep
 import numpy as np
 from tqdm import tqdm
@@ -17,20 +18,31 @@ class MinecraftSerial:
 
         data=np.zeros((dims.y,dims.z,dims.x),dtype=np.float16)
         t.print("setup")
+        
+        def _copy():
+            for y in range(dims.y):
+                for z in range(dims.z):
+                    for x in range(dims.x):
+                        t.print("start")
+                        block=self.mc.getBlockWithData(coords.x+x,coords.y+y,coords.z+z)
+                        t.print("getBlockWithData")
+                        if block.id==31:
+                            pass
+                        data[y,z,x]=block.id+block.data/100
+                        update_func()
+                        t.print("updated")
+                    t.print("z")
+        if use_tqdm:
+            with tqdm(total=dims.y*dims.z*dims.x) as pbar:
+                update_func=lambda: pbar.update(1)
+                _copy()
+                return data
+        else:
+            update_func=lambda: None
+            _copy()
+            return data
 
-        #data=str(dims.x)+","+str(dims.y)+","+str(dims.z)+"\n"
 
-        for y in tqdm(range(dims.y)) if use_tqdm else range(dims.y):
-            for z in range(dims.z):
-                for x in range(dims.x):
-                    block=self.mc.getBlockWithData(coords.x+x,coords.y+y,coords.z+z)
-                    if block.id==31:
-                        pass
-                    data[y,z,x]=block.id+block.data/100                      
-                        
-        #print(data)
-        return data
-    
     def _copy_util(self,coords1,coords2):
         coords1 = self._to_vec3(coords1,"Coords1")
         coords2 = self._to_vec3(coords2,"Coords2")
@@ -76,21 +88,8 @@ class MinecraftSerial:
                     blockdata=int((block-blockid)*100)
                     
                     self.mc.setBlock(coords.x+x,coords.y+y,coords.z+z,blockid,blockdata)
-class Timer:
 
-    def __init__(self):
-        self.enabled = True
-        self.tt=0
-        self.reset()
-    def reset(self):
-        self.stt=self.tt=time.time()
-    def print(self,txt):
-        tt=time.time()
-        if self.enabled:
-            print("%07.3f %07.3f %s"%(tt-self.stt,tt-self.tt,txt))
-        self.tt=tt
-t=Timer()
-t.enabled=False
+
 # def __replace(txtFormat):
 #     global _data
 #     _data=0
