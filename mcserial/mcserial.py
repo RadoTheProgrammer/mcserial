@@ -3,7 +3,7 @@
 import time
 
 from mcpi.minecraft import Vec3,Minecraft
-from mcpi.timer import t
+#from mcpi.timer import t
 from time import sleep
 import numpy as np
 from tqdm import tqdm
@@ -12,27 +12,25 @@ class MinecraftSerial:
         self.mc=mc
     
 
-    def copy(self,coords1=None,coords2=None,use_tqdm=False):
-        t.reset()
+    def copy(self,coords1=None,coords2=None,show_progress=True):
+        #t.reset()
         coords,dims = self._copy_util(coords1,coords2)
 
-        data=np.zeros((dims.y,dims.z,dims.x),dtype=np.float16)
-        t.print("setup")
+        data=np.zeros((dims.y,dims.z,dims.x))#,dtype=np.float16)
+        #t.print("setup")
         
         def _copy():
             for y in range(dims.y):
                 for z in range(dims.z):
                     for x in range(dims.x):
-                        t.print("start")
+                        #t.print("start")
                         block=self.mc.getBlockWithData(coords.x+x,coords.y+y,coords.z+z)
-                        t.print("getBlockWithData")
-                        if block.id==31:
-                            pass
                         data[y,z,x]=block.id+block.data/100
+                        #t.print("getBlockWithData")
                         update_func()
-                        t.print("updated")
-                    t.print("z")
-        if use_tqdm:
+                        #t.print("updated")
+                    #t.print("z")
+        if show_progress:
             with tqdm(total=dims.y*dims.z*dims.x) as pbar:
                 update_func=lambda: pbar.update(1)
                 _copy()
@@ -68,27 +66,38 @@ class MinecraftSerial:
             for event in self.mc.events.pollBlockHits():
 
                 pos=event.pos
-                b=self.mc.getBlockWithData(pos)
-                self.mc.setBlock(pos,41)
-                sleep(0.2)
-                self.mc.setBlock(pos,b)
+                # b=self.mc.getBlockWithData(pos)
+                # self.mc.setBlock(pos,41)
+                # sleep(0.2)
+                # self.mc.setBlock(pos,b)
                 self.mc.postToChat("Block hit at "+str(pos))
                 return pos
 
 
         
-    def paste(self,data,coords,use_tqdm=False):
-        coords = Vec3(*coords)
+    def paste(self,data,coords=None,show_progress=False):
+        coords = self._to_vec3(coords,"Coords")
         dims = data.shape
-        for y in tqdm(range(dims[1])) if use_tqdm else range(dims[1]):
-            for z in range(dims[2]):
-                for x in range(dims[0]):
-                    block=data[y,z,x]
-                    blockid=int(block)
-                    blockdata=int((block-blockid)*100)
-                    
-                    self.mc.setBlock(coords.x+x,coords.y+y,coords.z+z,blockid,blockdata)
+        def _paste():
+            for y in range(dims[0]):
+                for z in range(dims[1]):
+                    for x in range(dims[2]):
+                        block=data[y,z,x]
+                        blockid=int(block)
+                        blockdata=round((block-blockid)*100)
+                        print(blockdata)
+                        self.mc.setBlock(coords.x+x,coords.y+y,coords.z+z,blockid,blockdata)
+                        update_func()
+        if show_progress:
+            with tqdm(total=dims[1]*dims[2]*dims[0]) as pbar:
+                update_func=lambda: pbar.update(1)
+                _paste()
+        else:
+            update_func=lambda: None
+            _paste()
 
+    save = staticmethod(np.save)
+    load = staticmethod(np.load)
 
 # def __replace(txtFormat):
 #     global _data
