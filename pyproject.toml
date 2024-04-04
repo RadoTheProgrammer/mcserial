@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "mcserial"
+version = "1.0.0"
+description = "with mcpi, turn cuboid of blocks of minecraft into numpy arrays"
+authors = ["RadoTheProgrammer <rado@arazakar.com>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+mcpi = "^1.2.1"
+minecraftstuff = "^1.0.1"
+numpy = "^1.26.4"
+tqdm = "^4.66.2"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
